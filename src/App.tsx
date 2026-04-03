@@ -78,7 +78,59 @@ const BlogStatusCard = ({ blog, status }: { blog: Blog, status?: any }) => (
   </div>
 );
 
+// --- Error Boundary ---
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6">
+            <AlertCircle size={32} className="text-red-400" />
+          </div>
+          <h1 className="text-2xl font-bold mb-4">Une erreur est survenue</h1>
+          <p className="text-white/40 mb-8 max-w-md">
+            L'application a rencontré un problème inattendu. Veuillez vérifier votre configuration (notamment la clé API Gemini).
+          </p>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-left font-mono text-xs text-red-400 overflow-auto max-w-full">
+            {this.state.error?.message}
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-8 px-6 py-2 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform"
+          >
+            Recharger la page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [step, setStep] = useState<'welcome' | 'instructions' | 'analysis' | 'report'>('welcome');
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
