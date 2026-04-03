@@ -29,12 +29,17 @@ export async function generateBriefing(
     - AdSense (Rapport Claude) : ${JSON.stringify(adsenseData)}
     - Contexte Blogs (derniers articles, cadences) : ${JSON.stringify(blogContext)}
     
-    Règles d'analyse :
-    1. AdSense : Calculer RPM par pays, Score de valeur, identifier niches à fort CPC.
+    Règles d'analyse (STRICTES - NE JAMAIS INVENTER DE DONNÉES) :
+    1. AdSense : Analyser les dates dans le CSV pour déterminer la période réelle (7 jours, 28 jours, etc.). NE PAS assumer 28 jours par défaut. Calculer RPM par pays, Score de valeur, identifier niches à fort CPC.
     2. Analytics : Identifier engagement (>45s ok, <20s alerte), trafic vs RPM.
-    3. Cadence : Détecter les retards (astucieusement: 3/sem, quandonestmaman: 2/sem, tutoriel-iphone: 2/sem, en.astucieusement: 1/sem).
+    3. Cadence & Sitemaps : Utiliser UNIQUEMENT les données de "Contexte Blogs" fournies. NE PAS inventer d'articles ou de dates. Si un blog est en retard, le signaler selon sa cadence cible.
     4. Priorités : Proposer des sujets à fort CPC (coiffure 50+, mode, anti-âge, deco premium).
-    5. Recyclage : Suggérer des ponts entre les blogs.
+    5. Recyclage : Suggérer des ponts entre les blogs UNIQUEMENT si pertinent.
+    
+    CONSIGNE ANTI-HALLUCINATION :
+    - Si tu ne vois pas un article dans le sitemap d'un blog, il n'existe pas sur ce blog.
+    - Ne jamais attribuer le même article à plusieurs blogs sauf si c'est explicitement dans les données.
+    - Regarde bien la colonne 'Date' des CSV pour confirmer la période de l'analyse.
     
     IMPORTANT: Pour chaque priorité suggérée, ajouter obligatoirement :
     📎 Pour illustrer → [JSON PinMetrics] + [recherche Pinterest suggérée]

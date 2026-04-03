@@ -212,11 +212,38 @@ Glisse les 5 fichiers ici, ou tape "skip" pour continuer sans stats.
         }
       }
 
-      const blogContext = BLOGS.map(blog => ({
-        ...blog,
-        lastArticle: "Comment porter le bixie cut après 50 ans",
-        lastArticleDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        isDelayed: Math.random() > 0.7
+      const blogContext = await Promise.all(BLOGS.map(async blog => {
+        try {
+          const response = await fetch(`/api/sitemap?url=${encodeURIComponent(blog.sitemap)}`);
+          const data = await response.json();
+          
+          if (data.error) throw new Error(data.error);
+
+          const lastDate = data.lastArticleDate ? new Date(data.lastArticleDate) : null;
+          const daysSinceLast = lastDate ? Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+          
+          // Check delay based on cadence
+          // astucieusement: 3/sem (~2.3 days), quandonestmaman: 2/sem (3.5 days), tutoriel-iphone: 2/sem (3.5 days), en.astucieusement: 1/sem (7 days)
+          const maxDays = blog.id === 'astucieusement' ? 3 : 
+                          blog.id === 'en-astucieusement' ? 8 : 4;
+
+          return {
+            ...blog,
+            lastArticle: data.lastArticle || "Inconnu",
+            lastArticleDate: data.lastArticleDate,
+            isDelayed: daysSinceLast > maxDays,
+            daysAgo: daysSinceLast
+          };
+        } catch (e) {
+          console.error(`Error fetching sitemap for ${blog.name}:`, e);
+          return {
+            ...blog,
+            lastArticle: "Erreur de lecture sitemap",
+            lastArticleDate: null,
+            isDelayed: false,
+            daysAgo: 0
+          };
+        }
       }));
 
       const briefing = await generateBriefing(analyticsData, adsenseData, blogContext);
