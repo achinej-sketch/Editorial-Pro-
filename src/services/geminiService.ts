@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -39,39 +39,6 @@ export async function generateBriefing(
     IMPORTANT: Pour chaque priorité suggérée, ajouter obligatoirement :
     📎 Pour illustrer → [JSON PinMetrics] + [recherche Pinterest suggérée]
     
-    Format de sortie attendu (Markdown strict) :
-    
-    📊 État des blogs
-    | Blog | Dernier article | Thème | Jours | Statut |
-    | :--- | :--- | :--- | :--- | :--- |
-    | astucieusement.com | [titre] | [thème] | il y a [X] jours | [✅ ok / ⚠️ retard] |
-    | quandonestmaman.fr | [titre] | [thème] | il y a [X] jours | [✅ ok / ⚠️ retard] |
-    | tutoriel-iphone.fr | [titre] | [thème] | il y a [X] jours | [✅ ok / ⚠️ retard] |
-    | en.astucieusement.com | [titre] | [thème] | il y a [X] jours | [✅ ok / ⚠️ retard] |
-    
-    🔍 Alertes Analytics (si fichiers Analytics fournis)
-    | Blog | Article | Vues | Engagement | Signal |
-    | :--- | :--- | :--- | :--- | :--- |
-    | [blog] | [titre court] | [X] | [X]s | [⏱️ / ⚡ / 🚫] |
-    
-    💰 Top articles (si rapport Claude fourni)
-    | Article | Revenus 28j | RPM France | RPM Canada/BE | Signal |
-    | :--- | :--- | :--- | :--- | :--- |
-    | [titre court] | €[X] | €[X] | €[X] | [🌍 / 💰 / 🇺🇸] |
-    
-    🎯 Priorités du jour
-    - [Blog] → [Titre suggéré] — [angle / mots-clés] — pourquoi : [signal CPC / RPM / retard / tendance]
-      📎 Pour illustrer → [JSON PinMetrics] + [recherche Pinterest suggérée]
-    
-    🚫 Sujets déjà couverts récemment
-    - [blog] : [thème] — publié il y a [X] jours, ne pas répéter
-    
-    💡 Suggestions bonus
-    [Opportunités saisonnières, CPC, pays, etc.]
-    
-    ♻️ Recyclages possibles
-    - [Blog source] → [Blog cible] : [Titre original] — angle suggéré : [nouvel angle]
-    
     Rappel permanent : 
     - en.astucieusement.com est en phase de démarrage, ne pas alerter sur le faible trafic.
     - tutoriel-iphone.fr home page en top trafic est normal.
@@ -87,6 +54,100 @@ export async function generateBriefing(
   const response = await ai.models.generateContent({
     model,
     contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          blogStatus: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                blog: { type: Type.STRING },
+                lastArticle: { type: Type.STRING },
+                theme: { type: Type.STRING },
+                daysAgo: { type: Type.NUMBER },
+                status: { type: Type.STRING, description: "ok or retard" }
+              },
+              required: ["blog", "lastArticle", "theme", "daysAgo", "status"]
+            }
+          },
+          analyticsAlerts: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                blog: { type: Type.STRING },
+                article: { type: Type.STRING },
+                views: { type: Type.NUMBER },
+                engagement: { type: Type.NUMBER },
+                signal: { type: Type.STRING, description: "⏱️ / ⚡ / 🚫" }
+              },
+              required: ["blog", "article", "views", "engagement", "signal"]
+            }
+          },
+          topArticles: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                article: { type: Type.STRING },
+                revenue: { type: Type.NUMBER },
+                rpmFR: { type: Type.NUMBER },
+                rpmOther: { type: Type.NUMBER },
+                signal: { type: Type.STRING, description: "🌍 / 💰 / 🇺🇸" }
+              },
+              required: ["article", "revenue", "rpmFR", "rpmOther", "signal"]
+            }
+          },
+          priorities: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                blog: { type: Type.STRING },
+                title: { type: Type.STRING },
+                angle: { type: Type.STRING },
+                why: { type: Type.STRING },
+                illustration: { type: Type.STRING }
+              },
+              required: ["blog", "title", "angle", "why", "illustration"]
+            }
+          },
+          recentlyCovered: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                blog: { type: Type.STRING },
+                theme: { type: Type.STRING },
+                daysAgo: { type: Type.NUMBER }
+              },
+              required: ["blog", "theme", "daysAgo"]
+            }
+          },
+          bonusSuggestions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          recycling: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                source: { type: Type.STRING },
+                target: { type: Type.STRING },
+                originalTitle: { type: Type.STRING },
+                suggestedAngle: { type: Type.STRING }
+              },
+              required: ["source", "target", "originalTitle", "suggestedAngle"]
+            }
+          }
+        },
+        required: ["blogStatus", "analyticsAlerts", "topArticles", "priorities", "recentlyCovered", "bonusSuggestions", "recycling"]
+      }
+    }
   });
 
   return response.text;
